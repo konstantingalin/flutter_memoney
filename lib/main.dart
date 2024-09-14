@@ -1,8 +1,20 @@
 import 'package:flutter/material.dart';
+import 'auth/login/login.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Supabase.initialize(
+    url: 'https://muvvrtnzbbfpejzhofhs.supabase.co',
+    anonKey:
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im11dnZydG56YmJmcGVqemhvZmhzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MjE1ODgxMTgsImV4cCI6MjAzNzE2NDExOH0.LNK7P1P0x5AfOWTVOS43YTL-Pvmk3fxXc_9jXbtX7x8',
+  );
+
   runApp(const MyApp());
 }
+
+final supabase = Supabase.instance.client;
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -44,7 +56,15 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: InkWell(
+          child: Text(widget.title),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+            );
+          },
+        ),
       ),
       body: Center(
         child: Column(
