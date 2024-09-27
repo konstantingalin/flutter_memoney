@@ -78,6 +78,10 @@ http_parser
 3.4
 file:///Users/konstantin/.pub-cache/hosted/pub.dev/http_parser-4.1.0/
 file:///Users/konstantin/.pub-cache/hosted/pub.dev/http_parser-4.1.0/lib/
+intl
+2.12
+file:///Users/konstantin/.pub-cache/hosted/pub.dev/intl-0.17.0/
+file:///Users/konstantin/.pub-cache/hosted/pub.dev/intl-0.17.0/lib/
 jwt_decode
 2.12
 file:///Users/konstantin/.pub-cache/hosted/pub.dev/jwt_decode-0.3.1/

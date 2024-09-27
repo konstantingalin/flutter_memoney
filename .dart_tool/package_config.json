@@ -140,6 +140,12 @@
       "languageVersion": "3.4"
     },
     {
+      "name": "intl",
+      "rootUri": "file:///Users/konstantin/.pub-cache/hosted/pub.dev/intl-0.17.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "jwt_decode",
       "rootUri": "file:///Users/konstantin/.pub-cache/hosted/pub.dev/jwt_decode-0.3.1",
       "packageUri": "lib/",
@@ -476,7 +482,7 @@
       "languageVersion": "3.6"
     }
   ],
-  "generated": "2024-09-14T16:34:19.541179Z",
+  "generated": "2024-09-27T15:33:11.543487Z",
   "generator": "pub",
   "generatorVersion": "3.6.0-194.0.dev",
   "flutterRoot": "file:///Users/konstantin/Development/flutter",

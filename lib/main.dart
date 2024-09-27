@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'auth/login/login.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:me_money_app/auth/login/login.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:me_money_app/home/home.dart';
+import 'package:intl/intl.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('ru_RU', null);
 
   await Supabase.initialize(
     url: 'https://muvvrtnzbbfpejzhofhs.supabase.co',
@@ -19,106 +23,41 @@ final supabase = Supabase.instance.client;
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Мое тестовое приложение'),
+      home: const AuthRedirect(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-  String _test = "Ничего";
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
+class AuthRedirect extends StatelessWidget {
+  const AuthRedirect({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: InkWell(
-          child: Text(widget.title),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const LoginScreen()),
-            );
-          },
-        ),
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              _test,
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const Padding(
-              padding: EdgeInsets.only(top: 20),
-            ),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _test = 'Один';
-                    });
-                  },
-                  child: const Text('1'),
-                ),
-                const Padding(padding: EdgeInsets.only(left: 10)),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _test = 'Два';
-                    });
-                  },
-                  child: const Text('2'),
-                ),
-                const Padding(padding: EdgeInsets.only(left: 10)),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _test = 'Три';
-                    });
-                  },
-                  child: const Text('3'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    return FutureBuilder(
+      future: _checkAuth(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const CircularProgressIndicator();
+        } else if (snapshot.hasData && snapshot.data == true) {
+          return const HomeScreen();
+        } else {
+          return const LoginScreen();
+        }
+      },
     );
+  }
+
+  Future<bool> _checkAuth() async {
+    final session = supabase.auth.currentSession;
+    return session != null;
   }
 }
