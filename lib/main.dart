@@ -3,7 +3,6 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:me_money_app/auth/login/login.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:me_money_app/home/home.dart';
-import 'package:intl/intl.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

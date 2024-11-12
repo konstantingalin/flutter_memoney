@@ -10,7 +10,10 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  List<dynamic> currencies = [];
+  List<dynamic> expenses = [];
   late String currentDate;
+  late int currentYear;
 
   String? _selectedValue;
   String? _selectedValue2;
@@ -28,16 +31,26 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    currentDate = DateFormat('d MMMM', 'ru_RU').format(DateTime.now());
+
+    fetchCurrencyData();
+    final now = DateTime.now();
+    currentYear = now.year; // Сохраняем текущий год
+    currentDate = DateFormat('d MMMM', 'ru_RU').format(now);
   }
 
-  final expensesStream = supabase.from('expenses').stream(
-      primaryKey: ['id']).eq('user_create', supabase.auth.currentUser!.id);
+  Future<void> fetchCurrencyData() async {
+    final response = await supabase.from('currency').select();
+
+    setState(() {
+      currencies = response as List<dynamic>;
+    });
+  }
 
   Future<void> createExpenses(
       String userCreate, String name, double amount) async {
     await supabase.from('expenses').insert({
       'user_create': userCreate,
+      'user_create_name': 'Вадим Паясу',
       'type': 'spending',
       'name': name,
       'amount': amount,
@@ -60,20 +73,43 @@ class _HomeScreenState extends State<HomeScreen> {
     return '$formattedTime ($formattedDay)';
   }
 
+  void changeDate(int days) {
+    final date = DateFormat('d MMMM', 'ru_RU').parse(currentDate);
+    final newDate = date.add(Duration(days: days));
+    setState(() {
+      currentDate = DateFormat('d MMMM', 'ru_RU').format(newDate);
+    });
+  }
+
+  Stream<List<dynamic>> fetchExpenses() async* {
+    while (true) {
+      final response = await supabase
+          .from('expenses')
+          .select('*, currency!inner(short)')
+          .eq('user_create', supabase.auth.currentUser!.id);
+
+      yield response as List<dynamic>; // Возвращаем данные
+      await Future.delayed(
+          const Duration(seconds: 5)); // Задержка перед следующим запросом
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    // final expensesStream = supabase.from('expenses').stream(
+    //     primaryKey: ['id']).eq('user_create', supabase.auth.currentUser!.id);
+
     return Scaffold(
-      body: Container(
-        color: const Color.fromARGB(255, 247, 250, 252),
-        padding: const EdgeInsets.only(
-          left: 20,
-          right: 20,
-          top: 12,
-        ),
-        width: double.infinity,
-        height: double.infinity,
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(94.0),
         child: SafeArea(
-          child: SingleChildScrollView(
+          child: Container(
+            color: const Color.fromARGB(255, 247, 250, 252),
+            padding: const EdgeInsets.only(
+              left: 20,
+              right: 20,
+              top: 12,
+            ),
             child: Column(
               children: [
                 Row(
@@ -87,10 +123,15 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     Row(
                       children: [
-                        const Icon(
-                          Icons.keyboard_arrow_left,
-                          size: 24,
-                          color: Color.fromARGB(255, 93, 127, 160),
+                        InkWell(
+                          onTap: () {
+                            changeDate(-1);
+                          },
+                          child: const Icon(
+                            Icons.keyboard_arrow_left,
+                            size: 24,
+                            color: Color.fromARGB(255, 93, 127, 160),
+                          ),
                         ),
                         const SizedBox(
                           width: 12,
@@ -106,10 +147,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(
                           width: 12,
                         ),
-                        const Icon(
-                          Icons.keyboard_arrow_right,
-                          size: 24,
-                          color: Color.fromARGB(255, 93, 127, 160),
+                        InkWell(
+                          onTap: () {
+                            changeDate(1);
+                          },
+                          child: const Icon(
+                            Icons.keyboard_arrow_right,
+                            size: 24,
+                            color: Color.fromARGB(255, 93, 127, 160),
+                          ),
                         ),
                       ],
                     ),
@@ -119,7 +165,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Color.fromARGB(255, 93, 127, 160),
                     ),
                   ],
-                ), // topmenu
+                ),
                 const SizedBox(
                   height: 16,
                 ),
@@ -187,6 +233,24 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ],
                 ),
+              ],
+            ),
+          ),
+        ),
+      ),
+      body: Container(
+        color: const Color.fromARGB(255, 247, 250, 252),
+        padding: const EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 0,
+        ),
+        width: double.infinity,
+        height: double.infinity,
+        child: SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
                 const SizedBox(
                   height: 8,
                 ),
@@ -291,87 +355,65 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 8,
                       ),
                       Container(
-                        padding: const EdgeInsetsDirectional.fromSTEB(
-                            12, 10, 12, 10),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: const Color.fromARGB(255, 233, 239, 245),
-                            width: 1,
-                          ),
-                        ),
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String>(
-                            elevation: 0,
-                            isDense: true,
-                            isExpanded: true,
-                            icon: const Icon(
-                              Icons.keyboard_arrow_down,
-                              color: Color.fromARGB(255, 93, 127, 160),
-                              size: 16,
+                          padding: const EdgeInsetsDirectional.fromSTEB(
+                              12, 10, 12, 10),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: const Color.fromARGB(255, 233, 239, 245),
+                              width: 1,
                             ),
-                            dropdownColor: Colors.white,
-                            value: _selectedValue,
-                            hint: const Text(
-                              'Выберите валюту',
-                              style: TextStyle(
-                                color: Color.fromARGB(255, 163, 186, 209),
-                                fontSize: 14,
+                          ),
+                          child: DropdownButtonHideUnderline(
+                            child: DropdownButton<String>(
+                              elevation: 0,
+                              isDense: true,
+                              isExpanded: true,
+                              icon: const Icon(
+                                Icons.keyboard_arrow_down,
+                                color: Color.fromARGB(255, 93, 127, 160),
+                                size: 16,
                               ),
-                            ),
-                            onChanged: (String? newValue) {
-                              setState(() {
-                                _selectedValue = newValue;
-                              });
-                            },
-                            items: <Map<String, String>>[
-                              {
-                                'value': 'kz',
-                                'text': 'Тенге',
-                                'image': 'assets/images/kz_flag.png'
-                              },
-                              {
-                                'value': 'ru',
-                                'text': 'Рубли',
-                                'image': 'assets/images/ru_flag.png'
-                              },
-                              {
-                                'value': 'usa',
-                                'text': 'Доллары',
-                                'image': 'assets/images/usa_flag.png'
-                              },
-                              {
-                                'value': 'eu',
-                                'text': 'Евро',
-                                'image': 'assets/images/eu_flag.png'
-                              },
-                            ].map<DropdownMenuItem<String>>(
-                                (Map<String, String> item) {
-                              return DropdownMenuItem<String>(
-                                value: item['value'],
-                                child: Row(
-                                  children: <Widget>[
-                                    Image.asset(
-                                      item['image']!,
-                                      width: 20,
-                                      height: 13,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Text(
-                                      item['text']!,
-                                      style: const TextStyle(
-                                        color:
-                                            Color.fromARGB(255, 93, 127, 160),
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
+                              dropdownColor: Colors.white,
+                              value: _selectedValue,
+                              hint: const Text(
+                                'Выберите валюту',
+                                style: TextStyle(
+                                  color: Color.fromARGB(255, 163, 186, 209),
+                                  fontSize: 14,
                                 ),
-                              );
-                            }).toList(),
-                          ),
-                        ),
-                      ),
+                              ),
+                              onChanged: (String? newValue) {
+                                setState(() {
+                                  _selectedValue = newValue;
+                                });
+                              },
+                              items: currencies
+                                  .map<DropdownMenuItem<String>>((currency) {
+                                return DropdownMenuItem<String>(
+                                  value: currency['id'].toString(),
+                                  child: Row(
+                                    children: <Widget>[
+                                      Image.network(
+                                        currency['img'],
+                                        width: 20,
+                                        height: 13,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        currency['name'],
+                                        style: const TextStyle(
+                                          color:
+                                              Color.fromARGB(255, 93, 127, 160),
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          )),
                       const SizedBox(
                         height: 8,
                       ),
@@ -643,14 +685,49 @@ class _HomeScreenState extends State<HomeScreen> {
                           color: const Color.fromARGB(255, 236, 237, 241),
                         ),
                         StreamBuilder(
-                          stream: expensesStream,
+                          stream: fetchExpenses(),
                           builder: (context, snapshot) {
                             if (!snapshot.hasData) {
                               return const Center(
                                   child: CircularProgressIndicator());
                             }
 
-                            final expensesData = snapshot.data ?? [];
+                            // Получаем день и месяц из currentDate
+                            final dateParts = currentDate.split(' ');
+                            final currentDay = int.parse(dateParts[0]);
+                            final currentMonthName = dateParts[1];
+
+                            // Мапа для сопоставления названий месяцев с их номерами
+                            final monthMap = {
+                              'января': 1,
+                              'февраля': 2,
+                              'марта': 3,
+                              'апреля': 4,
+                              'мая': 5,
+                              'июня': 6,
+                              'июля': 7,
+                              'августа': 8,
+                              'сентября': 9,
+                              'октября': 10,
+                              'ноября': 11,
+                              'декабря': 12,
+                            };
+
+                            // Получаем номер месяца из мапы
+                            final currentMonth =
+                                monthMap[currentMonthName] ?? 0;
+
+                            // Фильтруем данные по текущей дате
+                            final expensesData =
+                                snapshot.data!.where((expense) {
+                              final createdAt =
+                                  DateTime.parse(expense['created_at'])
+                                      .toLocal();
+                              // Сравниваем год, месяц и день
+                              return createdAt.year == currentYear &&
+                                  createdAt.month == currentMonth &&
+                                  createdAt.day == currentDay;
+                            }).toList();
 
                             final totalExpenses = expensesData.fold<double>(
                               0,
@@ -659,185 +736,235 @@ class _HomeScreenState extends State<HomeScreen> {
                             );
 
                             String formattedTotal = totalExpenses % 1 == 0
-                                ? totalExpenses.toInt().toString()
+                                ? totalExpenses.toStringAsFixed(0)
                                 : totalExpenses.toStringAsFixed(2);
 
-                            return Column(
-                              children: [
-                                Column(
-                                  children: expensesData.map<Widget>((expense) {
-                                    return Column(
-                                      children: [
-                                        Row(
-                                          spacing: 8,
-                                          children: [
-                                            Container(
-                                              padding: const EdgeInsets.only(
-                                                top: 5,
-                                                left: 8,
-                                                right: 8,
-                                                bottom: 5,
-                                              ),
-                                              decoration: const BoxDecoration(
-                                                color: Color.fromARGB(
-                                                    255, 247, 250, 252),
-                                                borderRadius: BorderRadius.all(
-                                                  Radius.circular(12),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                expense['category'].toString(),
-                                                style: const TextStyle(
-                                                  color: Color.fromARGB(
-                                                      255, 93, 127, 160),
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                            ),
-                                            Container(
-                                              padding: const EdgeInsets.only(
-                                                top: 5,
-                                                left: 8,
-                                                right: 8,
-                                                bottom: 5,
-                                              ),
-                                              decoration: const BoxDecoration(
-                                                color: Color.fromARGB(
-                                                    255, 247, 250, 252),
-                                                borderRadius: BorderRadius.all(
-                                                  Radius.circular(12),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                '${expense['type']} - ${expense['storage']}',
-                                                style: const TextStyle(
-                                                  color: Color.fromARGB(
-                                                      255, 93, 127, 160),
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                            ),
-                                            Container(
-                                              padding: const EdgeInsets.only(
-                                                top: 5,
-                                                left: 8,
-                                                right: 8,
-                                                bottom: 5,
-                                              ),
-                                              decoration: const BoxDecoration(
-                                                color: Color.fromARGB(
-                                                    255, 247, 250, 252),
-                                                borderRadius: BorderRadius.all(
-                                                  Radius.circular(12),
-                                                ),
-                                              ),
-                                              child: Text(
-                                                supabase.auth.currentUser!.email
-                                                    .toString(),
-                                                style: const TextStyle(
-                                                  color: Color.fromARGB(
-                                                      255, 93, 127, 160),
-                                                  fontSize: 10,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(
-                                          height: 4,
-                                        ),
-                                        Row(
-                                          children: [
-                                            Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  expense['name'],
-                                                  style: const TextStyle(
-                                                    color: Color.fromARGB(
-                                                        255, 93, 127, 160),
-                                                    fontSize: 14,
-                                                    fontWeight: FontWeight.w600,
-                                                  ),
-                                                ),
-                                                const SizedBox(
-                                                  height: 4,
-                                                ),
-                                                Row(
-                                                  spacing: 16,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.center,
-                                                  children: [
-                                                    Text(
-                                                      '${expense["amount"]} тг'
-                                                          .toString(),
-                                                      style: const TextStyle(
-                                                        color: Color.fromARGB(
-                                                            255, 61, 153, 246),
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        height: 1.3,
+                            return totalExpenses > 0
+                                ? Column(
+                                    children: [
+                                      Column(
+                                        children:
+                                            expensesData.map<Widget>((expense) {
+                                          return Column(
+                                            children: [
+                                              Row(
+                                                spacing: 8,
+                                                children: [
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                      top: 5,
+                                                      left: 8,
+                                                      right: 8,
+                                                      bottom: 5,
+                                                    ),
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                      color: Color.fromARGB(
+                                                          255, 247, 250, 252),
+                                                      borderRadius:
+                                                          BorderRadius.all(
+                                                        Radius.circular(12),
                                                       ),
                                                     ),
-                                                    Text(
-                                                      formatDate(expense[
-                                                          'created_at']),
+                                                    child: Text(
+                                                      expense['category']
+                                                          .toString(),
                                                       style: const TextStyle(
                                                         color: Color.fromARGB(
                                                             255, 93, 127, 160),
                                                         fontSize: 10,
-                                                        fontWeight:
-                                                            FontWeight.w600,
                                                       ),
                                                     ),
-                                                  ],
-                                                ),
-                                              ],
+                                                  ),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                      top: 5,
+                                                      left: 8,
+                                                      right: 8,
+                                                      bottom: 5,
+                                                    ),
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                      color: Color.fromARGB(
+                                                          255, 247, 250, 252),
+                                                      borderRadius:
+                                                          BorderRadius.all(
+                                                        Radius.circular(12),
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      'Трата - ${expense['storage']}',
+                                                      style: const TextStyle(
+                                                        color: Color.fromARGB(
+                                                            255, 93, 127, 160),
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                      top: 5,
+                                                      left: 8,
+                                                      right: 8,
+                                                      bottom: 5,
+                                                    ),
+                                                    decoration:
+                                                        const BoxDecoration(
+                                                      color: Color.fromARGB(
+                                                          255, 247, 250, 252),
+                                                      borderRadius:
+                                                          BorderRadius.all(
+                                                        Radius.circular(12),
+                                                      ),
+                                                    ),
+                                                    child: Text(
+                                                      expense['user_create_name'] ??
+                                                          "-",
+                                                      style: const TextStyle(
+                                                        color: Color.fromARGB(
+                                                            255, 93, 127, 160),
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(
+                                                height: 4,
+                                              ),
+                                              Row(
+                                                children: [
+                                                  Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        expense['name'],
+                                                        style: const TextStyle(
+                                                          color: Color.fromARGB(
+                                                              255,
+                                                              93,
+                                                              127,
+                                                              160),
+                                                          fontSize: 14,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(
+                                                        height: 4,
+                                                      ),
+                                                      Row(
+                                                        spacing: 16,
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .center,
+                                                        children: [
+                                                          Text(
+                                                            expense["amount"] %
+                                                                        1 ==
+                                                                    0
+                                                                ? expense["amount"]
+                                                                        .toStringAsFixed(
+                                                                            0) +
+                                                                    ' ' +
+                                                                    expense["currency"]
+                                                                        [
+                                                                        "short"]
+                                                                : expense["amount"]
+                                                                        .toStringAsFixed(
+                                                                            2) +
+                                                                    ' ₸',
+                                                            style:
+                                                                const TextStyle(
+                                                              color: Color
+                                                                  .fromARGB(
+                                                                      255,
+                                                                      61,
+                                                                      153,
+                                                                      246),
+                                                              fontSize: 14,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                              height: 1.3,
+                                                            ),
+                                                          ),
+                                                          Text(
+                                                            formatDate(expense[
+                                                                'created_at']),
+                                                            style:
+                                                                const TextStyle(
+                                                              color: Color
+                                                                  .fromARGB(
+                                                                      255,
+                                                                      93,
+                                                                      127,
+                                                                      160),
+                                                              fontSize: 10,
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .w600,
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                              Container(
+                                                margin:
+                                                    const EdgeInsets.symmetric(
+                                                        vertical: 8),
+                                                height: 1,
+                                                color: const Color.fromARGB(
+                                                    255, 236, 237, 241),
+                                              ),
+                                            ],
+                                          );
+                                        }).toList(),
+                                      ),
+                                      const SizedBox(
+                                        height: 8,
+                                      ),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          const Text(
+                                            'Итого',
+                                            style: TextStyle(
+                                              color: Color.fromARGB(
+                                                  255, 93, 127, 160),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
                                             ),
-                                          ],
-                                        ),
-                                        Container(
-                                          margin: const EdgeInsets.symmetric(
-                                              vertical: 8),
-                                          height: 1,
-                                          color: const Color.fromARGB(
-                                              255, 236, 237, 241),
-                                        ),
-                                      ],
-                                    );
-                                  }).toList(),
-                                ),
-                                const SizedBox(
-                                  height: 8,
-                                ),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    const Text(
-                                      'Итого',
-                                      style: TextStyle(
-                                        color:
-                                            Color.fromARGB(255, 93, 127, 160),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
+                                          ),
+                                          Text(
+                                            '$formattedTotal ₸',
+                                            style: const TextStyle(
+                                              color: Color.fromARGB(
+                                                  255, 61, 153, 246),
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
+                                    ],
+                                  )
+                                : const Text(
+                                    'Пусто',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Color.fromARGB(255, 145, 171, 197),
                                     ),
-                                    Text(
-                                      '$formattedTotal тг',
-                                      style: const TextStyle(
-                                        color:
-                                            Color.fromARGB(255, 61, 153, 246),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            );
+                                  );
                           },
                         ),
                       ],
